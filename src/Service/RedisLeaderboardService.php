@@ -18,7 +18,7 @@ final class RedisLeaderboardService
      */
     public function __construct(?string $host = null, ?int $port = null, ?float $timeout = null)
     {
-        $host = $host ?? env('REDIS_HOST', '127.0.0.2');
+        $host = $host ?? env('REDIS_HOST', '127.0.0.1');
         $port = $port ?? (int)env('REDIS_PORT', 6379);
         $timeout = $timeout ?? 1.0;
 
