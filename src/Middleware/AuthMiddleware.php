@@ -25,11 +25,11 @@ class AuthMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $agent = $request->getHeaderLine('MenschAgent');
-        if (empty($agent)) {
+        if (empty($agent) || $agent !== 'unity') {
             return new Response([
                 'body' => json_encode(['ok' => false, 'error' => 'Missing MenschAgent header']),
                 'status' => 400,
-                'type' => 'application/json'
+                'type' => 'application/json',
             ]);
         }
 
@@ -38,7 +38,7 @@ class AuthMiddleware implements MiddlewareInterface
             return new Response([
                 'body' => json_encode(['ok' => false, 'error' => 'Unauthorized']),
                 'status' => 401,
-                'type' => 'application/json'
+                'type' => 'application/json',
             ]);
         }
         $token = $matches[1];
@@ -50,7 +50,7 @@ class AuthMiddleware implements MiddlewareInterface
             return new Response([
                 'body' => json_encode(['ok' => false, 'error' => 'Invalid token']),
                 'status' => 401,
-                'type' => 'application/json'
+                'type' => 'application/json',
             ]);
         }
 
