@@ -1,5 +1,6 @@
 <?php
 
+use App\Error\ApiExceptionRenderer;
 use Cake\Cache\Engine\FileEngine;
 use Cake\Database\Connection;
 use Cake\Database\Driver\Mysql;
@@ -96,10 +97,32 @@ return [
      * Configure the cache adapters.
      */
     'Cache' => [
+//        'default' => [
+//            'className' => FileEngine::class,
+//            'path' => CACHE,
+//            'url' => env('CACHE_DEFAULT_URL', null),
+//        ],
         'default' => [
-            'className' => FileEngine::class,
-            'path' => CACHE,
-            'url' => env('CACHE_DEFAULT_URL', null),
+            'className' => \Cake\Cache\Engine\RedisEngine::class,
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'port' => env('REDIS_PORT', 6379),
+            'timeout' => 1,
+            'persistent' => false,
+            'prefix' => 'menchico_',
+        ],
+        'leaderboard' => [
+            'className' => \Cake\Cache\Engine\RedisEngine::class,
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'port' => env('REDIS_PORT', 6379),
+            'timeout' => 1,
+            'prefix' => 'lb_',
+        ],
+        'ratelimit' => [
+            'className' => \Cake\Cache\Engine\RedisEngine::class,
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'port' => env('REDIS_PORT', 6379),
+            'timeout' => 1,
+            'prefix' => 'rl_',
         ],
 
         /*
@@ -172,6 +195,7 @@ return [
      */
     'Error' => [
         'errorLevel' => E_ALL,
+        'exceptionRenderer' => ApiExceptionRenderer::class,
         'skipLog' => [],
         'log' => true,
         'trace' => true,
