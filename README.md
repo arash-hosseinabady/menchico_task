@@ -1,53 +1,247 @@
-# CakePHP Application Skeleton
+# Menchico Mini API
 
-![Build Status](https://github.com/cakephp/app/actions/workflows/ci.yml/badge.svg?branch=5.x)
-[![Total Downloads](https://img.shields.io/packagist/dt/cakephp/app.svg?style=flat-square)](https://packagist.org/packages/cakephp/app)
-[![PHPStan](https://img.shields.io/badge/PHPStan-level%208-brightgreen.svg?style=flat-square)](https://github.com/phpstan/phpstan)
+A mini API service for **Menchico** that handles match result reporting and leaderboard functionality. Built with **PHP 8.2+**, **CakePHP 5**, **MySQL/MariaDB**, and **Redis**.
 
-A skeleton for creating applications with [CakePHP](https://cakephp.org) 5.x.
+---
 
-The framework source code can be found here: [cakephp/cakephp](https://github.com/cakephp/cakephp).
+## Features
+
+- **POST /matches/report** → Record match results with idempotency handling
+- **GET /leaderboard** → Retrieve leaderboard data with Redis fallback support
+- Token-based authentication with custom header validation
+- Rate limiting (**60 requests/minute per user-IP combination**)
+- Redis-based leaderboards with SQL fallback
+
+---
+
+## Requirements
+
+- PHP 8.2+
+- Composer
+- MySQL/MariaDB 5.7+
+- Redis 5+
+- CakePHP 5
+
+---
 
 ## Installation
 
-1. Download [Composer](https://getcomposer.org/doc/00-intro.md) or update `composer self-update`.
-2. Run `php composer.phar create-project --prefer-dist cakephp/app [app_name]`.
-
-If Composer is installed globally, run
-
 ```bash
-composer create-project --prefer-dist cakephp/app
+# Clone the repository
+git clone https://github.com/your-org/menchico-mini.git
+cd menchico-mini
+
+# Install dependencies
+composer install
 ```
 
-In case you want to use a custom app dir name (e.g. `/myapp/`):
+Configure environment variables in `.env`:
 
-```bash
-composer create-project --prefer-dist cakephp/app myapp
+```ini
+APP_NAME="menchico-mini"
+APP_ENV="dev"
+APP_DEBUG=true
+APP_KEY="your-secure-key-here"
+
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=menchico
+DB_USER=root
+DB_PASS=secret
+
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+SEASON_ID=2025S3
 ```
 
-You can now either use your machine's webserver to view the default home page, or start
-up the built-in webserver with:
+Run migrations and seed data:
 
 ```bash
-bin/cake server -p 8765
+bin/cake migrations migrate
+bin/cake migrations seed   # optional
 ```
 
-Then visit `http://localhost:8765` to see the welcome page.
+---
 
-## Update
+## Cache Configuration
 
-Since this skeleton is a starting point for your application and various files
-would have been modified as per your needs, there isn't a way to provide
-automated upgrades, so you have to do any updates manually.
+```php
+'Cache' => [
+    'default' => [
+        'className' => RedisEngine::class,
+        'host' => env('REDIS_HOST', '127.0.0.1'),
+        'port' => env('REDIS_PORT', 6379),
+        'timeout' => 1,
+        'persistent' => false,
+        'prefix' => 'menchico_',
+    ],
+    'leaderboard' => [
+        'className' => RedisEngine::class,
+        'host' => env('REDIS_HOST', '127.0.0.1'),
+        'port' => env('REDIS_PORT', 6379),
+        'timeout' => 1,
+        'prefix' => 'lb_',
+    ],
+    'ratelimit' => [
+        'className' => RedisEngine::class,
+        'host' => env('REDIS_HOST', '127.0.0.1'),
+        'port' => env('REDIS_PORT', 6379),
+        'timeout' => 1,
+        'prefix' => 'rl_',
+        'duration' => 70,
+    ],
+]
+```
 
-## Configuration
+---
 
-Read and edit the environment specific `config/app_local.php` and set up the
-`'Datasources'` and any other configuration relevant for your application.
-Other environment agnostic settings can be changed in `config/app.php`.
+## API Endpoints
 
-## Layout
+### **POST /matches/report**
 
-The app skeleton uses [Milligram](https://milligram.io/) (v1.3) minimalist CSS
-framework by default. You can, however, replace it with any other library or
-custom styles.
+Record a match result with idempotency protection.
+
+**Headers:**
+- `Authorization: Bearer {api_token}`
+- `MenschAgent: {client_identifier}`
+
+**Request Body:**
+```json
+{
+  "match_id": "uuid-string",
+  "user_id": 123,
+  "result": "win|loss",
+  "points": 50
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "user_id": 123,
+  "new_trophy": 1450,
+  "applied": true
+}
+```
+
+---
+
+### **GET /leaderboard**
+
+Retrieve leaderboard data for a given scope.
+
+**Query Parameters:**
+- `scope` (required): `daily`, `weekly`, or `season`
+- `limit` (optional, default `10`): Number of entries (1-100)
+- `user_id` (required): ID of the requesting user
+
+**Response:**
+```json
+{
+  "ok": true,
+  "scope": "weekly",
+  "top": [
+    {"user_id": 7, "score": 2100, "rank": 1},
+    {"user_id": 123, "score": 1950, "rank": 2}
+  ],
+  "me": {"user_id": 123, "score": 1950, "rank": 2}
+}
+```
+
+---
+
+## Database Schema
+
+### **Users Table**
+- `id` (PK)
+- `username` VARCHAR(64) UNIQUE
+- `password_hash` TEXT NULL
+- `api_token` VARCHAR(64) UNIQUE NOT NULL
+- `current_season_trophy` INT NOT NULL DEFAULT 0
+- `created` DATETIME
+- `modified` DATETIME
+
+### **Match Reports Table**
+- `id` (PK)
+- `match_id` VARCHAR(64) UNIQUE NOT NULL
+- `user_id` (FK)
+- `result` ENUM('win','loss')
+- `points` INT NOT NULL
+- `created` DATETIME
+
+### **Trophy History Table**
+- `id` (PK)
+- `user_id` (FK)
+- `delta` INT NOT NULL
+- `reason` VARCHAR(64) NOT NULL
+- `created` DATETIME
+
+---
+
+## Redis Keys
+
+**Leaderboards (ZSET):**
+- `lb:daily:YYYY-MM-DD`
+- `lb:weekly:YYYY-WW`
+- `lb:season:2025S3`
+
+**Rate Limit (STRING counters):**
+- `rl:report:{user_id}:{ip}:{yyyyMMddHHmm}`
+
+---
+
+## Business Rules
+
+- **Idempotency:** Duplicate `match_id` → `applied: false`
+- **Atomicity:** All DB changes within transactions
+- **Fallback:** SQL fallback when Redis unavailable
+- **Validation:** Rejects invalid enums, missing fields, negative points
+- **Security:** Users may only report their own results
+
+---
+
+## Testing
+
+Key scenarios:
+- Idempotent match reporting
+- Rate limiting → **429 responses**
+- Missing `MenschAgent` header → **400 responses**
+- Leaderboard fallback without Redis
+
+Run tests:
+```bash
+vendor/bin/phpunit
+```
+
+---
+
+## Design Notes
+
+### Trade-offs
+- CakePHP → rapid development (ORM + validation)
+- Redis fallback → high availability
+- Token authentication → simplicity
+
+### Error Handling
+- Comprehensive validation with meaningful error responses
+- Transaction rollback on failures
+- Graceful degradation without Redis
+
+### Future Enhancements
+- Real-time leaderboard updates (WebSockets)
+- Advanced analytics & reporting
+- Microservices for scalability
+- Smarter caching strategies
+
+---
+
+## Running the Application
+
+Start dependencies (MySQL, Redis), then run:
+```bash
+bin/cake server
+```
+
+API available at: **http://localhost:8765**

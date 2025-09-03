@@ -17,6 +17,35 @@ class LeaderboardController extends AppController
     /**
      * Index method
      *
+     * Retrieves leaderboard data for the specified scope (daily, weekly, or season)
+     * and returns it as a JSON response. Includes top-ranked users and the current
+     * user's rank if authenticated.
+     *
+     * HTTP Method: GET
+     *
+     * Query Parameters:
+     * - scope (string, required) The time scope for the leaderboard.
+     *   Valid values: 'daily', 'weekly', 'season'
+     * - limit (int, optional) Number of top entries to return.
+     *   Default: 10, Minimum: 1, Maximum: 100
+     *
+     * Response Format (JSON):
+     * {
+     *   "ok": boolean,      // Indicates success
+     *   "scope": string,    // The requested scope
+     *   "top": array,       // Array of top-ranked users
+     *   "me": array|null    // Current user's rank data (if authenticated)
+     * }
+     *
+     * Each user entry in 'top' and 'me' contains:
+     * - user_id: integer   // User identifier
+     * - score: integer     // User's score in the leaderboard
+     * - rank: integer      // User's rank position
+     *
+     * Error Responses:
+     * - HTTP 400 if an invalid scope is provided
+     * - Falls back to database queries if Redis is unavailable
+     *
      * @return \Cake\Http\Response|null|void Renders view
      */
     public function index()

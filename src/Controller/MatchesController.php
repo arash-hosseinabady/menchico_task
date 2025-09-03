@@ -26,7 +26,43 @@ class MatchesController extends AppController
     }
 
     /**
+     * Report method
+     *
+     * Processes a match result report from a user. Updates the user's trophy count
+     * if they won, applies rate limiting, and prevents duplicate submissions for
+     * the same match.
+     *
+     * HTTP Method: POST
+     *
+     * Request Body (JSON):
+     * - match_id (string, optional) Unique identifier for the match
+     * - result (string, required) Result of the match. Must be 'win' to award points
+     * - points (int, required) Number of points to award if the result is 'win'
+     *
+     * Response Format (JSON):
+     * {
+     *   "ok": boolean,          // Indicates success
+     *   "user_id": integer,     // ID of the user submitting the report
+     *   "new_trophy": integer,  // Updated trophy count of the user
+     *   "applied": boolean      // Whether the report was applied
+     * }
+     *
+     * Rate Limiting:
+     * - Limits requests to 60 per minute per user-IP combination
+     *
+     * Error Responses:
+     * - HTTP 429 (TooManyRequests) if rate limit is exceeded
+     * - HTTP 400 if validation fails or duplicate match report is detected
+     *
+     * Additional Behavior:
+     * - Awards points only for 'win' results
+     * - Updates daily, weekly, and season leaderboard caches
+     * - Rolls back all database changes on error
+     * - Prevents duplicate reports for the same match_id by the same user
+     *
      * @return \Cake\Http\Response
+     * @throws \App\Http\Exception\TooManyRequestsException
+     * @throws \Cake\ORM\Exception\PersistenceFailedException
      * @throws \Exception
      */
     public function report(): Response
