@@ -24,6 +24,10 @@ class AuthMiddleware implements MiddlewareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        if ($request->getServerParams()['REQUEST_URI'] === '/') {
+            return $handler->handle($request);
+        }
+
         $agent = $request->getHeaderLine('MenschAgent');
         if (empty($agent) || $agent !== 'unity') {
             return new Response([

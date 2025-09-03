@@ -49,19 +49,7 @@ class PagesController extends AppController
      */
     public function display(string ...$path): ?Response
     {
-        Cache::increment('daily:' . date('Y-m-d') . ':1', 20, 'leaderboard');
-        Cache::increment('weekly:' . date('o-W') . ':1', 15, 'leaderboard');
-        Cache::increment('season:' . env('SEASON_ID', '2025S3') . ':1', 14, 'leaderboard');
-        Cache::increment('daily:' . date('Y-m-d') . ':2', 20, 'leaderboard');
-        Cache::increment('weekly:' . date('o-W') . ':2', 15, 'leaderboard');
-        Cache::increment('season:' . env('SEASON_ID', '2025S3') . ':2', 14, 'leaderboard');
-
-        $prefix = Cache::getConfig('leaderboard')['prefix'];
-
-        $lb = new RedisLeaderboardService();
-        $top = $lb->getTop($prefix . 'season*', 2);
-        dd($top);
-
+        dd(env('REDIS_HOST'));
         if (!$path) {
             return $this->redirect('/');
         }

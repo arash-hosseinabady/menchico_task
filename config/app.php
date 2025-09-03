@@ -2,6 +2,7 @@
 
 use App\Error\ApiExceptionRenderer;
 use Cake\Cache\Engine\FileEngine;
+use Cake\Cache\Engine\RedisEngine;
 use Cake\Database\Connection;
 use Cake\Database\Driver\Mysql;
 use Cake\Log\Engine\FileLog;
@@ -97,13 +98,8 @@ return [
      * Configure the cache adapters.
      */
     'Cache' => [
-//        'default' => [
-//            'className' => FileEngine::class,
-//            'path' => CACHE,
-//            'url' => env('CACHE_DEFAULT_URL', null),
-//        ],
         'default' => [
-            'className' => \Cake\Cache\Engine\RedisEngine::class,
+            'className' => RedisEngine::class,
             'host' => env('REDIS_HOST', '127.0.0.1'),
             'port' => env('REDIS_PORT', 6379),
             'timeout' => 1,
@@ -111,14 +107,14 @@ return [
             'prefix' => 'menchico_',
         ],
         'leaderboard' => [
-            'className' => \Cake\Cache\Engine\RedisEngine::class,
+            'className' => RedisEngine::class,
             'host' => env('REDIS_HOST', '127.0.0.1'),
             'port' => env('REDIS_PORT', 6379),
             'timeout' => 1,
             'prefix' => 'lb_',
         ],
         'ratelimit' => [
-            'className' => \Cake\Cache\Engine\RedisEngine::class,
+            'className' => RedisEngine::class,
             'host' => env('REDIS_HOST', '127.0.0.1'),
             'port' => env('REDIS_PORT', 6379),
             'timeout' => 1,
