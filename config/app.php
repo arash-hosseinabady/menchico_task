@@ -123,6 +123,7 @@ return [
             'port' => env('REDIS_PORT', 6379),
             'timeout' => 1,
             'prefix' => 'rl_',
+            'duration' => 70,
         ],
 
         /*

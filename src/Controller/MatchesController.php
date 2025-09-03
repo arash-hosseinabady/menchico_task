@@ -42,7 +42,7 @@ class MatchesController extends AppController
 
         $count = Cache::increment($rateKey, 1, 'ratelimit');
         if ($count === 1) {
-            Cache::write($rateKey, $count, 'ratelimit', ['duration' => '+70 seconds']);
+            Cache::write($rateKey, $count, 'ratelimit');
         }
 
         if ($count > 60) {
