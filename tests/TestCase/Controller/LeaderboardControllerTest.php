@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use App\Controller\LeaderboardController;
+use App\Service\RedisLeaderboardService;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -22,61 +22,55 @@ class LeaderboardControllerTest extends TestCase
      * @var list<string>
      */
     protected array $fixtures = [
-        'app.Leaderboard',
+        'app.Users',
+        'app.MatchReports',
+        'app.TrophyHistory',
     ];
 
-    /**
-     * Test index method
-     *
-     * @return void
-     * @link \App\Controller\LeaderboardController::index()
-     */
-    public function testIndex(): void
+    protected function setUp(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        parent::setUp();
+        $lb = new RedisLeaderboardService();
+        $lb->incrementScore('daily', 1, 100);
+        $lb->incrementScore('daily', 2, 200);
+        $lb->incrementScore('daily', 3, 50);
     }
 
-    /**
-     * Test view method
-     *
-     * @return void
-     * @link \App\Controller\LeaderboardController::view()
-     */
-    public function testView(): void
+    public function testGetLeaderboardDaily(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->configRequest([
+            'headers' => [
+                'Authorization' => 'Bearer token-abc-123',
+                'MenschAgent' => 'unity',
+            ],
+        ]);
+
+        $this->get('/leaderboard?scope=daily&limit=2&user_id=1');
+        $this->assertResponseOk();
+
+        $data = json_decode((string)$this->_response->getBody(), true);
+        $this->assertTrue($data['ok']);
+        $this->assertEquals('daily', $data['scope']);
+        $this->assertCount(1, $data['top']);
+        $this->assertEquals(1, $data['me']['user_id']);
     }
 
-    /**
-     * Test add method
-     *
-     * @return void
-     * @link \App\Controller\LeaderboardController::add()
-     */
-    public function testAdd(): void
+    public function testGetLeaderboardInvalidScope(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->get('/leaderboard?scope=invalid&limit=10&user_id=1');
+        $this->assertResponseCode(400);
     }
 
-    /**
-     * Test edit method
-     *
-     * @return void
-     * @link \App\Controller\LeaderboardController::edit()
-     */
-    public function testEdit(): void
+    public function testFallbackToSqlWhenRedisFails(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
-    }
+        $this->configRequest([
+            'headers' => [
+                'Authorization' => 'Bearer token-abc-123',
+                'MenschAgent' => 'unity',
+            ],
+        ]);
 
-    /**
-     * Test delete method
-     *
-     * @return void
-     * @link \App\Controller\LeaderboardController::delete()
-     */
-    public function testDelete(): void
-    {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->get('/leaderboard?scope=season&limit=5&user_id=1');
+        $this->assertResponseOk();
     }
 }

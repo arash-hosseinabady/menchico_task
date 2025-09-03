@@ -52,23 +52,26 @@ class MatchesController extends AppController
         $data['user_id'] = $user->id;
         $matchReports = TableRegistry::getTableLocator()->get('MatchReports');
         $matchReport = $matchReports->newEntity($data);
-        if ($matchReport->getErrors()) {
-            throw new PersistenceFailedException($matchReport, ['match_reports']);
+
+        if (isset($data['match_id'])) {
+            $existing = $matchReports->find()
+                ->where([
+                    'match_id' => $data['match_id'],
+                    'user_id' => $user->id,
+                ])
+                ->first();
+            if ($existing) {
+                return $this->response->withType('application/json')->withStringBody(json_encode([
+                    'ok' => true,
+                    'user_id' => $user->id,
+                    'new_trophy' => $user->current_season_trophy,
+                    'applied' => false,
+                ]));
+            }
         }
 
-        $existing = $matchReports->find()
-            ->where([
-                'match_id' => $data['match_id'],
-                'user_id' => $user->id,
-            ])
-            ->first();
-        if ($existing) {
-            return $this->response->withType('application/json')->withStringBody(json_encode([
-                'ok' => true,
-                'user_id' => $user->id,
-                'new_trophy' => $user->current_season_trophy,
-                'applied' => false,
-            ]));
+        if ($matchReport->getErrors()) {
+            throw new PersistenceFailedException($matchReport, ['match_reports']);
         }
 
         $connection = ConnectionManager::get('default');
