@@ -20,12 +20,30 @@ class UsersFixture extends TestFixture
         $this->records = [
             [
                 'id' => 1,
-                'username' => 'Lorem ipsum dolor sit amet',
-                'password_hash' => 'Lorem ipsum dolor sit amet, aliquet feugiat. Convallis morbi fringilla gravida, phasellus feugiat dapibus velit nunc, pulvinar eget sollicitudin venenatis cum nullam, vivamus ut a sed, mollitia lectus. Nulla vestibulum massa neque ut et, id hendrerit sit, feugiat in taciti enim proin nibh, tempor dignissim, rhoncus duis vestibulum nunc mattis convallis.',
-                'api_token' => 'Lorem ipsum dolor sit amet',
-                'current_season_trophy' => 1,
-                'created' => 1756757122,
-                'updated' => 1756757122,
+                'username' => 'tester1',
+                'password_hash' => null,
+                'api_token' => 'token-abc-123',
+                'current_season_trophy' => 1000,
+                'created' => '2025-09-01 10:00:00',
+                'modified' => '2025-09-01 10:00:00',
+            ],
+            [
+                'id' => 2,
+                'username' => 'tester2',
+                'password_hash' => null,
+                'api_token' => 'token-def-456',
+                'current_season_trophy' => 800,
+                'created' => '2025-09-01 11:00:00',
+                'modified' => '2025-09-01 11:00:00',
+            ],
+            [
+                'id' => 3,
+                'username' => 'tester3',
+                'password_hash' => null,
+                'api_token' => 'token-ghi-789',
+                'current_season_trophy' => 500,
+                'created' => '2025-09-01 12:00:00',
+                'modified' => '2025-09-01 12:00:00',
             ],
         ];
         parent::init();

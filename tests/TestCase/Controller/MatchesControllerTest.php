@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Test\TestCase\Controller;
 
-use App\Controller\MatchesController;
+use App\Service\RedisLeaderboardService;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -22,72 +22,106 @@ class MatchesControllerTest extends TestCase
      * @var list<string>
      */
     protected array $fixtures = [
-        'app.Matches',
+        'app.Users',
+        'app.MatchReports',
+        'app.TrophyHistory',
     ];
 
-    /**
-     * Test index method
-     *
-     * @return void
-     * @link \App\Controller\MatchesController::index()
-     */
-    public function testIndex(): void
+    protected function setUp(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        parent::setUp();
+        $lb = new RedisLeaderboardService();
+        $lb->__construct();
+        $lb->incrementScore('daily', 1, -999999);
     }
 
-    /**
-     * Test view method
-     *
-     * @return void
-     * @link \App\Controller\MatchesController::view()
-     */
-    public function testView(): void
+    public function testMissingMenschAgentHeader(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->configRequest([
+            'headers' => [
+                'Authorization' => 'Bearer token-abc-123',
+            ],
+        ]);
+        $this->post('/matches/report', [
+            'match_id' => 1,
+            'user_id' => 1,
+            'result' => 'win',
+            'points' => 50,
+        ]);
+        $this->assertResponseCode(400);
     }
 
-    /**
-     * Test add method
-     *
-     * @return void
-     * @link \App\Controller\MatchesController::add()
-     */
-    public function testAdd(): void
+    public function testUnauthorizedUserMismatch(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->configRequest([
+            'headers' => [
+                'Authorization' => 'Bearer token-abc-1234',
+                'MenschAgent' => 'unity',
+            ],
+        ]);
+        $this->post('/matches/report', [
+            'match_id' => 2,
+            'result' => 'win',
+            'points' => 50,
+        ]);
+        $this->assertResponseCode(401);
     }
 
-    /**
-     * Test edit method
-     *
-     * @return void
-     * @link \App\Controller\MatchesController::edit()
-     */
-    public function testEdit(): void
+    public function testReportWinAndIdempotency(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
+        $this->configRequest([
+            'headers' => [
+                'Authorization' => 'Bearer token-abc-123',
+                'MenschAgent' => 'unity',
+            ],
+        ]);
+
+        $this->post('/matches/report', [
+            'match_id' => 3,
+            'user_id' => 1,
+            'result' => 'win',
+            'points' => 100,
+        ]);
+        $this->assertResponseOk();
+        $data = json_decode((string)$this->_response->getBody(), true);
+        $this->assertTrue($data['applied']);
+
+        $this->configRequest([
+            'headers' => [
+                'Authorization' => 'Bearer token-abc-123',
+                'MenschAgent' => 'unity',
+            ],
+        ]);
+
+        $this->post('/matches/report', [
+            'match_id' => 3,
+            'user_id' => 1,
+            'result' => 'win',
+            'points' => 200,
+        ]);
+        $this->assertResponseOk();
+        $data = json_decode((string)$this->_response->getBody(), true);
+        $this->assertFalse($data['applied']);
     }
 
-    /**
-     * Test delete method
-     *
-     * @return void
-     * @link \App\Controller\MatchesController::delete()
-     */
-    public function testDelete(): void
+    public function testRateLimitExceeded(): void
     {
-        $this->markTestIncomplete('Not implemented yet.');
-    }
+        for ($i = 1; $i <= 61; $i++) {
+            $this->configRequest([
+                'headers' => [
+                    'Authorization' => 'Bearer token-abc-123',
+                    'MenschAgent' => 'unity',
+                ],
+            ]);
 
-    /**
-     * Test report method
-     *
-     * @return void
-     * @link \App\Controller\MatchesController::report()
-     */
-    public function testReport(): void
-    {
-        $this->markTestIncomplete('Not implemented yet.');
+            $this->post('/matches/report', [
+                'match_id' => $i,
+                'user_id' => 1,
+                'result' => 'loss',
+                'points' => 0,
+            ]);
+        }
+
+        $this->assertResponseCode(429);
     }
 }

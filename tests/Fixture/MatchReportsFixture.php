@@ -20,11 +20,19 @@ class MatchReportsFixture extends TestFixture
         $this->records = [
             [
                 'id' => 1,
-                'match_id' => 'Lorem ipsum dolor sit amet',
+                'match_id' => 1,
                 'user_id' => 1,
-                'result' => 'Lorem ip',
-                'points' => 1,
-                'created' => '2025-09-01 20:08:28',
+                'result' => 'win',
+                'points' => 50,
+                'created' => '2025-09-01 09:00:00',
+            ],
+            [
+                'id' => 2,
+                'match_id' => 2,
+                'user_id' => 2,
+                'result' => 'loss',
+                'points' => 30,
+                'created' => '2025-09-01 09:10:00',
             ],
         ];
         parent::init();
