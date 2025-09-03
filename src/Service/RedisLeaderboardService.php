@@ -10,6 +10,10 @@ final class RedisLeaderboardService
 {
     private Redis $redis;
 
+    const SCOPE_DAILY = 'daily';
+    const SCOPE_WEEKLY = 'weekly';
+    const SCOPE_SEASON = 'season';
+
     /**
      * @param string|null $host
      * @param int|null $port
@@ -34,9 +38,9 @@ final class RedisLeaderboardService
     private function makeKey(string $scope, int $userId): string
     {
         return match ($scope) {
-            'daily' => 'daily:' . date('Y-m-d') . ':' . $userId,
-            'weekly' => 'weekly:' . sprintf('%04d-%02d', (int)date('o'), (int)date('W')) . ':' . $userId,
-            'season' => 'season:' . env('SEASON_ID', '2025S3') . ':' . $userId,
+            self::SCOPE_DAILY => 'daily:' . date('Y-m-d') . ':' . $userId,
+            self::SCOPE_WEEKLY => 'weekly:' . sprintf('%04d-%02d', (int)date('o'), (int)date('W')) . ':' . $userId,
+            self::SCOPE_SEASON => 'season:' . env('SEASON_ID', '2025S3') . ':' . $userId,
             default => throw new InvalidArgumentException('Invalid scope'),
         };
     }
@@ -106,5 +110,20 @@ final class RedisLeaderboardService
         }
 
         return null;
+    }
+
+    /**
+     * @param string $pattern
+     * @return void
+     * @throws \RedisException
+     */
+    public function deleteAllKeysByPattern(string $pattern): void
+    {
+        $it = null;
+        while ($keys = $this->redis->scan($it, $pattern)) {
+            foreach ($keys as $key) {
+                $this->redis->del($key);
+            }
+        }
     }
 }

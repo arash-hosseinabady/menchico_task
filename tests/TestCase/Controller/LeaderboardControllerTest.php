@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Controller;
 
 use App\Service\RedisLeaderboardService;
+use Cake\Cache\Cache;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -30,14 +31,18 @@ class LeaderboardControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $lb = new RedisLeaderboardService();
-        $lb->incrementScore('daily', 1, 100);
-        $lb->incrementScore('daily', 2, 200);
-        $lb->incrementScore('daily', 3, 50);
+
+        $cacheConfig = Cache::getConfig('leaderboard');
+        $redisService = new RedisLeaderboardService();
+        $pattern = $cacheConfig['prefix'] . 'daily:' . date('Y-m-d') . ':*';
+        $redisService->deleteAllKeysByPattern($pattern);
     }
 
-    public function testGetLeaderboardDaily(): void
+    public function testGetLeaderboardDailyWithData(): void
     {
+        Cache::increment('daily:' . date('Y-m-d') . ':' . 1, 100, 'leaderboard');
+        Cache::increment('daily:' . date('Y-m-d') . ':' . 2, 200, 'leaderboard');
+
         $this->configRequest([
             'headers' => [
                 'Authorization' => 'Bearer token-abc-123',
@@ -51,8 +56,27 @@ class LeaderboardControllerTest extends TestCase
         $data = json_decode((string)$this->_response->getBody(), true);
         $this->assertTrue($data['ok']);
         $this->assertEquals('daily', $data['scope']);
-        $this->assertCount(1, $data['top']);
+        $this->assertCount(2, $data['top']);
         $this->assertEquals(1, $data['me']['user_id']);
+    }
+
+    public function testGetLeaderboardDailyWithNoData(): void
+    {
+        $this->configRequest([
+            'headers' => [
+                'Authorization' => 'Bearer token-abc-123',
+                'MenschAgent' => 'unity',
+            ],
+        ]);
+
+        $this->get('/leaderboard?scope=daily&limit=2&user_id=10');
+        $this->assertResponseOk();
+
+        $data = json_decode((string)$this->_response->getBody(), true);
+        $this->assertTrue($data['ok']);
+        $this->assertEquals('daily', $data['scope']);
+        $this->assertEmpty($data['top']);
+        $this->assertNull($data['me']);
     }
 
     public function testGetLeaderboardInvalidScope(): void

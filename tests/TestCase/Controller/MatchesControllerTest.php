@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Test\TestCase\Controller;
 
 use App\Service\RedisLeaderboardService;
+use Cake\Cache\Cache;
 use Cake\TestSuite\IntegrationTestTrait;
 use Cake\TestSuite\TestCase;
 
@@ -30,9 +31,15 @@ class MatchesControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $lb = new RedisLeaderboardService();
-        $lb->__construct();
-        $lb->incrementScore('daily', 1, -999999);
+
+        $redisService = new RedisLeaderboardService();
+        $cacheConfig = Cache::getConfig('leaderboard');
+        $pattern = $cacheConfig['prefix'] . 'daily:' . date('Y-m-d') . ':*';
+        $redisService->deleteAllKeysByPattern($pattern);
+
+        $cacheConfig = Cache::getConfig('ratelimit');
+        $pattern = $cacheConfig['prefix'] . '*';
+        $redisService->deleteAllKeysByPattern($pattern);
     }
 
     public function testMissingMenschAgentHeader(): void
